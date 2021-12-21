@@ -1,0 +1,319 @@
+# Execute a query (SELECT , INSERT)
+sqoop eval 
+--connect jdbc:mysql://nn01.itversity.com:3306 \
+--username retail_dba \
+--query "SELECT * FROM employees LIMIT 10" \
+-P
+
+
+# Show tables in retail_db database
+sqoop list-tables \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username retail_dba \
+-P passwd123
+
+
+# Sqoop import (DB to HDFS)
+sqoop import \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username root \
+--table orders \
+--target-dir /hdata-00 \
+-P
+
+- Sqoop import will trigger a MapReduce job to import the records.
+- Only Map job will be triggered as we are not performing any aggregation.
+- By default 4 mappers will run in parallel to complete the import task.
+- Mappers divide the work based on PrimaryKey
+- If table does not have a PrimaryKey, you can use --split-by <col-name> to split the work.
+- Default query to decide spilt size: 
+    select min(<split-by-col>), max(<split-by-col>) from <table-name>
+
+- If default query is not optimal, you can specify custom query returning two numeric columns using `--boundary-query` argument.
+
+If 
+ - no primary key
+ - num-mappers > 1
+The job will fail.
+
+# Sqoop import entire database
+sqoop import 
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--as-sequencefile \
+--username root \
+--num-mappers 4 \
+--warehouse-dir /user/hive/retaildb \
+-P 
+
+Each table will have its own directory under /user/hive/retaildb
+
+# Importing selected columns
+Importing Selected Columns
+sqoop import \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username retail_dba \
+--table customers \
+--columns customer_id,customer_fname,customer_city \
+--warehouse-dir /user/cloudera/retail-selected-cols \
+-P
+
+# Import all but 2 tables
+sqoop import 
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--as-sequencefile \
+--exclude-tables "table1,table2"
+--username root \
+--num-mappers 4 \
+--warehouse-dir /user/hive/retaildb \
+-P 
+
+
+Boundary Val Query
+------------------
+
+If PrimaryKey has outliers, Boundary Value Query will calculate incorrect min & max and hence splits will be wrongly calculated.
+
+Support our Primary key has value from 1 to 49999. But there is an outlier (200000) also. In this case, Boundary query will be:
+
+select MIN(1), MAX(200000)
+
+The split size will be (200000 - 1)4 = 49999
+
+This will create un-even jobs. By default 4 mappers will be assigned and some of them will be idle. This will be visible in output also.
+
+Custom boundary vals query will resolve this issue.
+
+sqoop import
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username root \
+--num-mappers 4 \
+--table orders \
+--boundary-query "select 1, 68883" \
+--warehouse-dir /user/hive/retaildb \
+-P
+
+This time output will be like
+21/02/06 19:22:21 : BoundingValsQuery: SELECT 1, 68883
+21/02/06 19:22:21 : Split size: 17220; Num splits: 4 from: 1 to: 68883
+21/02/06 19:22:21 : number of splits:4
+
+
+Boundary Val Query using Non-Primary Key
+----------------------------------------
+
+sqoop import \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username retail_dba \
+--table order_items \
+--boundary-query "SELECT min(order_item_order_id), max(order_item_order_id)
+                  FROM order_items WHERE order_item_order_id >= 10000" \
+--warehouse-dir /user/cloudera/custom-boundval2 \
+-P
+
+21/02/07 08:02:32 : SELECT t.* FROM `order_items` AS t LIMIT 1
+
+21/02/07 08:02:36 : BoundingValsQuery:
+ SELECT min(order_item_order_id), max(order_item_order_id)
+ FROM order_items WHERE order_item_order_id >= 10000
+
+21/02/07 08:02:36 : Split size: 14720; Num splits: 4 from: 10000 to: 68883
+21/02/07 08:02:36 : number of splits:4
+
+One more example:
+
+sqoop import \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username retail_dba \
+--table orders \
+--columns order_id,order_customer_id,order_status \
+--where "order_status in ('processing')" \
+--warehouse-dir /user/cloudera/where-clause \
+-P
+
+One more example:
+
+sqoop import \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username retail_dba \
+--table orders \
+--where "order_status IN ('COMPLETE', 'CLOSED') AND order_date LIKE '2013-08%'" \
+--warehouse-dir /user/cloudera/custom-boundval3 \
+-P
+
+Delimiters:
+
+sqoop import \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username retail_dba \
+--table orders \
+--field-terminated-by '|' \
+--field-terminated-by ';' \
+--target-dir /user/cloudera/delimiters \
+-P
+
+# Create a Hive Table from RDBMS Table
+# Only populates metastore.
+sqoop create-hive-table \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username retail_dba \
+--table orders \
+--hive-table emps \
+--fields-terminated-by ',' \
+-P
+
+# Append data to existing dataset in HDFS
+sqoop import \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username retail_dba \
+--table orders \
+--warehouse-dir /user/cloudera/verbose \
+--append \
+-P
+
+# Handling NULLs
+--null-string '\N'  # The string to be written for a null value for string columns
+
+--null-non-string '\N' # The string to be written for a null value for non-string columns
+
+Sqoop Export (HDFS to DB)
+-------------------------
+
+sqoop export \
+--connect jdbc:mysql://quickstart.cloudera:3306/banking \
+--username root \
+--table card_transactions \
+--export-dir /user/hive/data/card_trans.csv \
+--fields-terminated-by ',' \
+-P
+
+Notice that we have used user root to export data to DB as retail_dba don’t have rights to perform data load.
+
+If export fails, the DB table will have some junk records.
+
+To resolve this issue, use staging table to load data into DB.
+
+sqoop export \
+--connect jdbc:mysql://quickstart.cloudera:3306/banking \
+--username root \
+--table card_transactions \
+--staging-table card_transactions_stage \
+--export-dir /user/cloudera/data/card_transactions.csv \
+--fields-terminated-by ',' \
+-P
+
+The target table will be populated only if Sqoop export to the staging table is successful.
+
+After succesfull load to target table, Staging table will not have any record as all the records have been migrated to the actual table.
+
+Incremental Imports - append
+----------------------------
+Incremental imports are performed by comparing the values in a check column against a reference value for the most recent import.
+
+Option
+--incremental append|lastmodified
+--check-column <col>
+--last-value N
+
+Example: An order table already have id values upto 99. Now recently id 100,101,102 upto 68883 has been inserted into the table which you want to import.
+
+sqoop import \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username root -P \
+--table orders \
+--target-dir /user/hive/warehouse/db001/orders \
+--check-column id \
+--incremental append \
+--last-value 99
+
+Job will output something like this:
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+Maximal id query for free form incremental import: SELECT MAX(`order_id`) FROM `orders`
+Incremental import based on column `order_id`
+Lower bound value: 0
+Upper bound value: 68883
+
+SELECT MIN(`order_id`), MAX(`order_id`) FROM `orders` WHERE ( `order_id` > 0 AND `order_id` <= 68883 )
+Split size: 17220; Num splits: 4 from: 1 to: 68883
+number of splits:4
+
+Retrieved 68883 records.
+Incremental import complete! To run another incremental import of all data following this import, supply the following arguments:
+
+--incremental append
+--check-column order_id
+--last-value 68883
+(Consider saving this with 'sqoop job --create')
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+Incremental Imports - last-modified
+-----------------------------------
+`--incremental lastmodified` - Use this when rows of the source table may be updated, and each such update will set the value of a last-modified column to the current timestamp.
+
+sqoop import \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username root \
+--table orders \
+--target-dir /user/cloudera/db001/orders\
+--check-column order_date \
+--incremental lastmodified \
+--last-value '2021-02-07 08:25:08' \
+--append \
+-P
+
+Merging tables
+--------------
+
+sqoop import \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username root \
+--table orders \
+--warehouse-dir /user/cloudera/lastmodified-data \
+--incremental lastmodified \
+--check-column order_date \
+--last-value  '2021-02-07 08:25:08' \
+--merge-key order_id \
+-P
+
+The merge tool will "flatten" two datasets into one, taking the newest available records for each primary key.
+
+Sqoop jobs
+----------
+
+sqoop job \
+--create job_orders -- import \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username root -P \
+--table orders \
+--warehouse-dir /user/cloudera/job-data \
+--incremental append \
+--check-column order_id \
+--last-value 0
+
+Metastore will be stored at ~/.sqoop/
+
+By default, a private metastore is instantiated in $HOME/.sqoop. If you have configured a hosted metastore with the sqoop-metastore tool, you can connect to it by specifying the --meta-connect argument. This is a JDBC connect string just like the ones used to connect to databases for import.
+
+Direct import
+-------------
+
+sqoop-import \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username root \
+--password cloudera \
+--table orders \
+--target-dir /data/orders \
+--direct
+
+Securing Password
+-----------------
+
+hadoop credential create mysql.retaildb.password \
+  -provider jceks://hdfs/user/hive/mysql.retaildb.passwd.jceks
+
+sqoop eval \
+-Dhadoop.security.credential.provider.path=jceks://hdfs/user/hive/mysql.retaildb.passwd.jceks \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username root \
+--password-alias mysql.retaildb.password \
+--query "select count(*) from orders"
