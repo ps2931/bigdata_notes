@@ -1,0 +1,344 @@
+ACID
+    - Atomicity (an operation either succeeds completely or fails, it does not leave partial data)
+    - Consistency (once an application performs an operation the results of that operation are visible to it in every
+      subsequent operation)
+    - Isolation (an incomplete operation by one user does not cause unexpected side effects for other users)
+    - Durability (once an operation is complete it will be preserved even in the face of machine or system failure)
+
+
+Numeric Types
+    - TINYINT (1-byte signed integer, from -128 to 127)
+    - SMALLINT (2-byte signed integer, from -32,768 to 32,767)
+    - INT/INTEGER (4-byte signed integer, from -2,147,483,648 to 2,147,483,647)
+    - BIGINT (8-byte signed integer, from -9,223,372,036,854,775,808 to 9,223,372,036,854,775,807)
+    - FLOAT (4-byte single precision floating point number)
+    - DOUBLE (8-byte double precision floating point number)
+    - DOUBLE PRECISION (alias for DOUBLE, only available starting with Hive 2.2.0)
+    - DECIMAL
+    - NUMERIC (same as DECIMAL, starting with Hive 3.0.0)
+
+Date/Time Types
+    - TIMESTAMP (Note: Only available starting with Hive 0.8.0)
+    - DATE (Note: Only available starting with Hive 0.12.0)
+    - INTERVAL (Note: Only available starting with Hive 1.2.0)
+
+String Types
+    - STRING
+    - VARCHAR (Note: Only available starting with Hive 0.12.0)
+    - CHAR (Note: Only available starting with Hive 0.13.0)
+
+Misc Types
+    - BOOLEAN
+    - BINARY (Note: Only available starting with Hive 0.8.0)
+
+Complex Types
+    - arrays: ordered collection of elements of the same type. ["a", "b"]
+    - maps: unordered collection of key-value paris. {"a":1, "b":2}
+    - structs: collection of elements of different types. {"a": 1, "b":"c"} 
+
+Date/Time Data Types
+    Timestamp: The time stamp format is YYYY-MM-DD HH:MM:SS[.fffffffff], Precision 29, scale 9.
+
+Hive Built-in functions
+
+UDF: work on single row. e.g trim(), concat(), length()
+UDAF: work on multiple rows. e.g count(*), sum(), avg()
+UDTF: work on single row outputs multiple rows. e.g explode()
+
+Hive Set Operation - Minus
+--------------------------
+Hive does not support MINUS operator. To perform minus operation do this:
+
+SELECT a.*
+FROM pat_dtls_load a
+      LEFT JOIN new_pat_dtls_load b
+        ON ( a.sk = b.sk )
+WHERE  b.sk IS NULL;
+
+That is do the left-join and omit NULL from right table.
+
+Subqueries in the from clause
+-----------------------------
+
+SELECT name, newsalary
+FROM (SELECT name, salary * 1.1 as newsalary
+      FROM employee) as emp_new;
+
+The sub-query has to be given a name because every table in a FROM clause must have a name.
+
+Subqueries in the WHERE Clause
+------------------------------
+
+SELECT id
+FROM customers
+WHERE id IN (SELECT customer_id FROM orders);
+
+
+# Create table
+CREATE DATABASE db001;
+USE db001;
+CREATE TABLE customer(id int, name string, address string);
+
+# Show table information
+describe formatted customer;
+
+# Insert records
+insert into customer values
+(2, 'john', 'california'),
+(3, 'darsey', 'new york'),
+(4, 'betty', 'detroit');
+
+# Default location where data will be stores
+$ hadoop fs -ls /user/hive/warehouse/
+drwxrwxrwx /user/hive/warehouse/db001.db
+
+# Data files of table customer
+$ hadoop fs -ls /user/hive/warehouse/db001.db/customer/
+/user/hive/warehouse/db001.db/customer/000000_0
+/user/hive/warehouse/db001.db/customer/000000_0_copy_1
+
+Managed Tables
+--------------
+    - By default tables are managed tables.
+    - Deleting a managed table deletes both data and metadata
+
+create table if not exists products_managed(
+  id 		string,
+  title 	string,
+  cost 	    float
+) row format delimited fields terminated by ',' stored as textfile; 
+
+# Load data into table from local file system
+load data local inpath '/home/user51/products.csv' 
+into table products_managed;
+
+Hive will make a copy of products.csv from local to warehouse directory.
+
+# Loading data from HDFS file
+load data inpath 'hdfs:///user/user51/new_products.csv' 
+into table products_managed;
+
+Hive will moved the new_products.csv from source HDFS location to destination HDFS location (warehouse directory).
+
+# Load one table from another table
+insert into products_managed_two select * from products_managed;
+
+# Delete old records and inset new records
+load data local inpath '/home/user51/products001.csv' 
+overwrite into table products_managed;
+
+$ hadoop fs -ls /user/user51/warehouse/db001.db/products_managed;
+/user/user51/warehouse/db001.db/products_managed/products001.csv
+
+The old data files have been deleted by Hive and the warehouse directory contains only the new file.
+
+External Table
+--------------
+
+External tables are stored outside the warehouse directory. They can access data stored in sources such as remote HDFS locations or Azure Storage Volumes.
+
+Whenever we drop the external table, then only the metadata associated with the table will get deleted.
+
+# Create external table
+create external table products (
+  id 		string,
+  title 	string,
+  cost 	    float)
+row format delimited fields terminated by ','
+stored as textfile location '/user/user51/data/';
+
+For external tables it is mandatory to provide row format delimited fields terminated by ',' option otherwise Hive will take space as field separator.
+
+Array Data Type
+---------------
+
+first_name	extra_curriculum
+----------------------------
+Tom	        ['orchestra']
+Ann	        ['orchestra', 'art']
+
+SELECT 
+	first_name, 
+	extra_curriculum[0] AS first_extra_curriculum 
+FROM 
+	students
+;
+
+Let’s now say you want to have one row for each element in your array. Hive has build-in table generating functions (UDTF) for that. These UDTFs transform a single input row into multiple output rows. 
+
+The basic syntax is:
+    LATERAL VIEW explode(expression) tableAlias AS columnAlias
+
+This returns 0 to many rows: one row for each element from the input array.
+
+SELECT 
+	first_name, 
+	extra_curriculum 
+FROM 
+	students
+	LATERAL VIEW EXPLODE (extra_curriculum) ec AS extra_curriculum
+;
+
+first_name	extra_curriculum
+----------------------------
+Tom	        orchestra
+Ann	        orchestra
+Ann	        art
+
+Maps Data Type
+--------------
+
+Consider this table:
+
+first_name	grade
+-----------------
+Tom	        {'math': 'B', 'english': 'B'}
+Ann	        {'math': 'A', 'english': 'B', 'biology': 'C'}
+
+SELECT 
+	first_name, 
+	grade["math"] AS math_grade 
+FROM 
+	students
+;
+
+Output:
+
+first_name	grade
+-----------------
+Tom	        B
+Ann	        A
+
+Structs Data Type
+-----------------
+Structs are written in JSON format.  You can access the values using the dot notation for the field to extact the value.
+
+first_name	teacher
+Tom	        {'math': 'Mrs Johnson', 'english': 'Mr Miller', 'nr_teachers': 2}
+Ann	        {'math': 'Mrs Johnson', 'english': 'Mrs Thomson', 'biology': 'Mr Chu', 'nr_teachers': 3}
+
+SELECT 
+	first_name, 
+	teacher.math AS math_teacher 
+FROM 
+	student
+;
+
+To sum it up, depending on the complex data type, you can query elements differently. This last table gives an overview on how.
+
+
+Type	How to extract elements	Example	
+---------------------------------------
+Array	by index	            my_array[0]	
+Map	    by key	                my_map['key']	
+Struct	by dot notation	        my_struct.name
+
+Reference: https://datadojo.dev/2020/06/07/working-with-complex-datatypes-in-hive/
+
+Custome User defined functions
+------------------------------
+
+Udf to create a string to uppercase.
+
+create table if not exists sample_tbl(
+name    string,
+count   int
+) row format delimited fields terminated by ',' 
+lines terminated by '\n' stored as textfile;
+
+load data local inpath '/home/user51/sample_data.txt' 
+overwrite into table sample_tbl;
+
+# Write custom udf code
+$ cat src/bigdata/hive/udf/DataStandardization.java 
+
+package bigdata.hive.udf;
+import org.apache.hadoop.hive.ql.exec.UDF;
+
+public class DataStandardization extends UDF {
+  public String evaluate(String input) {
+    if(input==null) { return null; }
+    return (input.toString().toUpperCase());
+  }
+}
+
+Compile the source file. You will be required following jars for compilation:
+
+    /usr/hdp/2.6.5.0-292/hadoop/hadoop-common-2.7.3.2.6.5.0-292.jar
+    /usr/hdp/2.6.5.0-292/hive2/lib/*
+
+To check the location of these files, check the hadoop classpath
+$ hadoop classpath
+
+javac \
+ -cp "/usr/hdp/2.6.5.0-292/hadoop/hadoop-common-2.7.3.2.6.5.0-292.jar:/usr/hdp/2.6.5.0-292/hive2/lib/*" \
+-d classes src/bigdata/hive/udf/DataStandardization.java
+
+* The classes directory should already exist.
+
+Create a jar file. 
+jar cvf upperudf.jar -C classes/ .
+
+View contents of jar file:
+jar tf upperudf.jar
+
+hive> ADD JAR /home/pankaj31/udf-example/upperudf.jar; 
+hive> create temporary function to_upper as 
+'bigdata.hive.udf.DataStandardization';
+
+hive> select to_upper(name) from students;
+
+The function created this way will only be available till the hive session. Once exit our function will not be available for the next hive session.
+
+To permanently add our function to Hive we need to:
+ - move jar file to HDFS
+ - define a permanent function
+
+$ cd udf-example
+$ hadoop fs -put toupper.jar /user/user51/
+
+In hive execute below command:
+CREATE FUNCTION toUppercase AS 'bigdata.hive.udf.DataStandardization'
+USING JAR 'hdfs:///user/user51/toupper.jar';
+
+Hive Optimization
+-----------------
+
+    1. Partitioning
+    2. Bucketing
+
+Using low cardinality column, we can partition our data. Each partiiton level will create a corresponding directory.
+
+Partition cause less data to be scanned as Hive will scan only required partitions for the query result.
+
+a. Static partitioning
+b. Dynamic partitioning
+
+Static partitioning
+-------------------
+Used when we already know which partition the data will go to.
+Its faster than dynamic partitioning.
+Preferred for loading large files into Hive table.
+
+set hive.mapred.mode=strict
+
+# a managed table partitioned on state column
+CREATE TABLE orders_part(
+    id 			STRING,
+    customer_id STRING,
+    product_id 	STRING,
+    quantity 	INT,
+    amount 		DOUBLE,
+    zipcode 	CHAR(5)
+) PARTITIONED BY (state CHAR(2))
+ROW FORMAT DELIMITED FIELDS TERMINATED by ',';
+
+state is also a column but not mentioned in the list like other columns becuase we are using it as a partition. Each state will have its own directory.
+
+# loading data from state of california
+load data local inpath '/home/user51/data/orders-ca.csv'
+into table orders_part partition(state="CA")
+
+dfs -ls /user/hive/warehouse/db001.db/orders_partition/state=CA/;
+/user/hive/warehouse/db001.db/orders_partition/state=CA/orders-CA.csv
+
