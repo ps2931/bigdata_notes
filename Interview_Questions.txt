@@ -104,3 +104,8 @@ List of string are there and u have to find the list of Arrays containing the st
 Input: abc cba azf bca fza
 Output: [abc bca cba] [azf fza]
 
+-----------------------
+Concentrix
+-----------------------
+They major focus on SQL part
+And optimizations in hive and spark
