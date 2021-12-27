@@ -1,0 +1,220 @@
+-----------------------
+Spark submit parameters
+-----------------------
+
+spark-submit
+  --spark.executor.cores=5
+  --spark.executor.instances=3  // or --num-executors=3
+  --spark.executor.memory=20g
+  --spark.driver.memory=5g
+  --spark.dynamicAllocation.enabled=true
+  --spark.dynamicAllocation.maxExecutors=10
+
+
+Consider a case where data needs to be read from a partitioned table with each partition containing multiple small/medium files.
+In this case you should have good executor memory, more executors and as usual 5 cores.
+
+Similar cases as above but, not having multiple small/medium files at source. In this case executors can be less and can have good memory for each executor.
+
+In case of incremental load where data pull is less, however needs to pull from multiple tables in parallel(Futures). In this case executors can be more, little less executor memory and as usual 5 cores.
+
+----------------------
+Client vs Cluster Mode
+----------------------
+
+Client:
+
+    Driver runs on a dedicated server (Master node) inside a dedicated process. This means it has all available resources at it's disposal to execute work.
+    Driver opens up a dedicated Netty HTTP server and distributes the JAR files specified to all Worker nodes (big advantage).
+    Because the Master node has dedicated resources of it's own, you don't need to "spend" worker resources for the Driver program.
+    If the driver process dies, you need an external monitoring system to reset it's execution.
+
+Cluster:
+
+    Driver runs on one of the cluster's Worker nodes. The worker is chosen by the Master leader
+    Driver runs as a dedicated, standalone process inside the Worker.
+    Driver programs takes up at least 1 core and a dedicated amount of memory from one of the workers (this can be configured).
+    Driver program can be monitored from the Master node using the --supervise flag and be reset in case it dies.
+    When working in Cluster mode, all JARs related to the execution of your application need to be publicly available to all the workers. This means you can either manually place them in a shared place or in a folder for each of the workers.
+
+Shuffle
+    For a join operation, get the number of partitions of big dataframe. Set the shuffle partition parameter to this value.
+
+Broadcast join:
+    spark.conf.set("spark.sql.autoBroadcastJoinThreshold", SIZE_OF_SMALLER_DATASET)
+
+If we need to just decrease the number of partitions — we should probably use coalesce and not repartition, because it minimizes data movement and doesn’t trigger exchange. Beware that coalesce may cause different size partitions.
+
+If we want to split our data across partitions more evenly — repartition.
+
+------------------
+Spark Jobs
+------------------
+
+  - Driver converts Spark application into one or more Spark jobs.
+  - Each job will be transformed into a DAG.
+  - For a DAG, stages will be created.
+  - Criteria for a new stage creation is wide transformations.
+  - Each stage comprise of multiple tasks, which are then federated accross each spark executor.
+  - Each task maps to a single core and works on a single partition of data.
+
+  Spark App > Jobs > DAG [ Satges > Tasks]
+
+
+------------------
+Partition pruning
+------------------
+
+If a table is partitioned and one of the query predicates is on the table partition column(s), then only partitions that contain data which satisfy the predicate get scanned. Partition pruning eliminates scanning of the partitions which are not required by the query.
+
+a. Static partition pruning:
+This query will cause partition pruning (considering key is a partitioned column):
+
+select t1.key from t1 ,t2 where t1.key=t2.dim_key and t1.key = 40
+
+As we added the predicate “t1.key = 40,” and “key” is a partitioning column, that means the query requires data from only one partition.
+
+The query will cause only one partition read from T2 also. That's because, we need:
+
+  - All rows from T1 where t1.key = 40
+  - All rows from T2 where t2.dim_key = t1.key
+  - Hence, all rows from T2 where t2.dim_key = 40
+
+As all rows of T2 where t2.dim_key=40 can be only be in one partition of T2, as it’s a partitioning column.
+
+select t1.key from t1, t3, t2
+where t1.key=t3.key and t1.val=t3.val and t1.key=t2.dim_key and t2.dim_key = 40
+
+As expected, only one partition was scanned for both T1 and T2. But 1000 partitions were scanned for T3.
+
+select t1.key from t1, t2, t3
+where t1.key=t3.key and t1.val=t3.val and t1.key=t2.dim_key and t2.dim_key = 40
+
+b. Dynamic Partitioning Pruning:
+select t1.key from t1, t2 where t1.key=t2.dim_key and t2.val > 40
+
+This time predicate is on a non-partitioned column of T2, like `val > 40`.
+
+By default, all the partitions of both the tables are scanned.
+
+We can optimize this query using dynamic partition pruning.
+
+set spark.sql.optimizer.dynamicPartitionPruning.enabled=true
+
+Reference:
+https://www.unraveldata.com/resources/intricacies-in-spark-30-partition-pruning/
+
+-----------------------
+Spark Job Optimizations
+-----------------------
+
+Type of optimizations:
+  - Code optimization
+  - Spark configuration
+  - File format optimization
+
+1. Minimize Shuffle operation
+-----------------------------
+Following operations cause shuffle:
+  - repartition & coalesce
+  - groupByKey & reduceByKey
+  - joins & cogroup
+  - wide transformation
+
+Issue:
+  - Shuffle is an expensive operations.
+  - It cause disk I/O, data serialization and network I/O.
+
+Control Shuffling by tuning following parameters:
+  - spark.shuffle.compress
+  - spark.shuffle.file.buffer (allows more buffering)
+  - spark.shuffle.service.enabled
+
+2. Minimize Disk I/O
+--------------------
+
+Executors have disks and disk writes can occur during:
+  - shuffling
+  - spills to disk
+  - persistence to disk
+
+3. Code Optimization
+--------------------
+Check log & Spark UI
+Look at Task Quartile to understand GC and memory usage of you job.
+Using this information you can reduce memory foot print of your job.
+
+
+4. Minimize the Scans
+---------------------
+Spark reads data from Disk/HDFS/S3 or any other source for performing transformation we want on the dataset.
+
+If we can reduce the data size read by Spark, we can greatly improve the Spark performance. Data size can be reduced by:
+
+  - Partition pruning (Partitioning & Bucketing)
+  - Filtering
+  - Avoid Data skewness
+
+
+5. Join Optimization
+--------------------
+
+Safest Join
+  SortMerge join (both dataset are large)
+
+Fastest Join
+  Broadcast join (one data is small enough to fit into memory)
+
+Drop duplicates before join and groupBy operation.
+
+6. Persisting or Caching the data
+------------------------------
+
+7. Use Boradcast variable
+
+8. Use Accumulators
+
+9. Use Parquet with snappy compression if possible
+
+10. Increase Parallelism
+------------------------
+  spark.default.parallelism
+  spark.sql.files.minPartitionNum
+
+11. Use Dynamic allocation
+--------------------------
+  spark.dynamicAllocation.enabled
+  spark.dynamicAllocation.minExecutors
+  spark.dynamicAllocation.maxExecutors
+  spark.dynamicAllocation.executorIdleTimeout 2min
+    terminate an executor if its idle for 2 minutes
+
+  spark.dynamicAllocation.schedulerBacklogTimeout 1m
+    new executors will be requested each time backlog timeout is exceeded.
+
+10. Miscelleneous
+----------------
+  Avoid UDFs. Apply lambda
+  Use sequence.par.foreach if possible
+  Use off-heap memory
+  Reduce disk spills
+    spark.shuffle.file.buffer
+    spark.shuffle.compress
+    spark.shuffle.spill.compress
+    spark.io.compression.snappy.blockSize
+
+----------------
+Cache vs Persist
+----------------
+
+Cache is Memory only.
+    Persist(StorageLevel.MEMORY_ONLY)
+
+Persist has storage options.
+
+-----------------------
+Repartition vs Coalesce
+-----------------------
+Repartition can increase or decrease the number of partitions.
+Coalesce can only decrease the number of partition.
+Coalesce may cause unequal size partitions.

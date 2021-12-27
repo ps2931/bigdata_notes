@@ -1,0 +1,127 @@
+-----------------
+Problems Problems
+-----------------
+
+// P01 Find last element of a list
+----------------------------------
+if(alist.nonEmpty) alist.reduce((a, b) => b)
+
+// P02 Find the last but one element of a list
+----------------------------------
+alist.reverse.lift(1).getOrElse(throw new NoSuchElementException())
+
+// Tail recursion
+@annotation.tailrec
+def f1[T](list: List[T]): T = list match {
+  case Nil => throw new NoSuchElementException("List is empty")
+  case List(_) => throw new NoSuchElementException("Sigleton list")
+  case List(x, _) => x
+  case _ :: xs => f1(xs)
+}
+
+// P03 Find the Kth element of a list
+----------------------------------
+list.lift(k - 1).getOrElse(throw new IndexOutOfBoundsException())
+
+// Tail recursion
+@annotation.tailrec
+def f1[T](list: List[T], n: Int): T = list match {
+  case Nil => throw new IndexOutOfBoundsException()
+  case h :: t =>
+    if (n < 1) throw new IndexOutOfBoundsException()
+    if (n == 1) h else f1(t, n - 1)
+}
+
+// P04 Find the number of elements of a list
+----------------------------------
+// Tail recursion
+@annotation.tailrec
+def f2[T](list: List[T], n: Int = 0): Int = list match {
+  case Nil => n
+  case _ :: t => f2(t, n + 1)
+}
+
+// Folding
+def f3[T](list: List[T]): Int = list.foldLeft(0)((a, _) => a + 1)
+
+// P05 Reverse a list
+----------------------------------
+
+// Tail recursion
+@annotation.tailrec
+def f2[T](list: List[T], acc: List[T] = Nil): List[T] = list match {
+  case Nil => acc
+  case h :: t => f2(t, h :: acc)
+}
+
+
+Execution
+3,5,7,11,13
+
+3::5,7,11,13 => (5,7,11,13, 3::Nil)
+5:7,11,13    => (7,11,13, 5::3::Nil)
+7:11,13      => (11,13, 7::5::3::Nil)
+11:13        => (13, 11:7::5::3::Nil)
+
+
+// P06 Find out whether a list is a palindrome
+----------------------------------
+
+def f3[T](list: List[T]): Boolean =
+  list.zip(list.reverse).forall{case (a, b) => a == b}
+
+"xamax".zip("xamax".reverse) // Vector((x,x), (a,a), (m,m), (a,a), (x,x))
+
+// P07 Flatten a nested list structure
+def flatten[A](list : List[_]) : List[Any] = list flatMap {
+  _ match {
+      case x : List[_] => flatten(x)
+      case x => List(x)
+  }
+}
+
+// Eliminate consecutive duplicates of list elements
+def compress[A](list : List[A]) : List[A] = list match {
+  case head :: Nil => List(head)
+  case head :: tail => head :: compress(tail.dropWhile(_ == head))
+  case Nil => Nil
+}
+
+dropWhile discards all the items at the start of a collection for which the condition is true. It stops discarding as soon as the first item fails the condition.
+
+scala> compress(List('a, 'a, 'b, 'c, 'c, 'a, 'd, 'e, 'e))
+res8: List[Symbol] = List('a, 'b, 'c, 'a, 'd, 'e)
+
+
+scala> def f1[T](n: Int, list: List[T]) =
+          list.flatMap(List.fill(n)(_))
+f1: [T](n: Int, list: List[T])List[T]
+
+scala> f1(3, List(9,11,17))
+res14: List[Int] = List(9, 9, 9, 11, 11, 11, 17, 17, 17)
+
+Flatten a list
+--------------
+def flatten(ls: List[Any]): List[Any] = ls flatMap {
+    case ms: List[_] => flatten(ms)
+    case e => List(e)
+}
+
+Find kth largest element
+------------------------
+def findKthLargest(nums: Array[Int], k: Int): Int = {
+    val maxHeap = scala.collection.mutable.PriorityQueue[Int]()
+    maxHeap ++= nums
+    for (_ <- 0 until k - 1)
+      maxHeap.dequeue()
+
+    maxHeap.dequeue()
+}
+
+// 4th largest
+findKthLargest(Array(101, 107, 1, 13, 17, 19, 23, 27), 4) // 23
+
+Given an unsorted Array . Find 2nd largest number in that array.
+---------------------------------------------------------------
+
+

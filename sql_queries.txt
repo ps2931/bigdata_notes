@@ -1,0 +1,88 @@
+SQL Questions:
+
+Find 2nd highest salary?
+    select max(salary) from employee
+    where salary < (select max(salary) from employee);
+
+    select salary from (
+    select salary from employee order by salary desc limit 2)
+    ) as emp order by salary limit 1;
+
+Find 2nd last record.
+Sort the records in descending order and select the row=2 record
+
+select emp_id, emp_name
+from (
+   select e.* ,
+   row_number() over (order by emp_id desc) as rn
+   from employee e
+) x
+where x.rn = 2;
+
+
+Highest salary in a department?
+employee and department table
+
+select deptId, max(salary)
+from employee
+group by deptId;
+
+Highest and lowest salary department wise?
+
+select e.dept_name, e.salary,
+min(salary) over (partition by dept_name) as min_salary,
+max(salary) over (partition by dept_name) as max_salary
+from employee e
+
+
+Find doctors who work in same hospital but in different speciality.
+Schema: id, name, speciality, hospital, city, consultation_fee
+
+select d1.*
+from doctors d1
+join doctors d2
+on d1.id <> d2.id 
+and d1.hospital = d2.hospital
+and d1.speciality <> d2.speciality;
+
+Find users who logged in consecutively 3 or more time in a day.
+https://www.youtube.com/watch?v=FNYdBLwZ6cE
+
+
+Fetch TOP N records?
+select TOP N * from employees order by salary desc;
+
+Delete duplicate rows from a table?
+
+# duplicates are decided based on name and dept
+select emp_id, emp_name, dept_name
+from (
+    select e.* ,
+    row_number () over (partition by emp_name,dept_name order by emp_id) as rn
+    from employee e
+    order by emp_id
+) x where x.rn > 1;
+
+Joins in SQL?
+
+Aggregate functions:
+    count(), sum(), avg(), min(), max()
+
+Types of SQL commands:
+    DDL (DROP, RENAME, CREATE, ALTER, TRUNCATE)
+    DML (DELETE, INSERT, UPDATE)
+    DQL (SELECT)
+    TCL (COMMIT, ROLLBACK, SAVEPOINT)
+
+Where vs Having?
+Where - to filter records.
+Having - to filter records returned from the GRIUP BY clause.
+
+Delete vs Truncate vs Drop?
+Group By vs Order By?
+
+Char vs Varchar?
+UNION vs JOIN?
+IN vs EXISTS?
+UNION vs UNION ALL?
+

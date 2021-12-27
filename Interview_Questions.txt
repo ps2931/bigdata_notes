@@ -1,0 +1,106 @@
+---------------------------
+UST Global
+---------------------------
+
+Q. Reverse a string
+----------------
+def reverse(s: String) : String =
+    (for(i <- s.length - 1 to 0 by -1) yield s(i)).mkString
+
+Q. Write a program
+------------------
+to_remove = ['%', '-', '&', ":"]
+removeFrom = ('XYZ','12%', 'MALE', 'ABC','1-7KG', '12KG', 'MALE&FEMELE', '1:1',"script")
+output=['MALE','ABC','XYZ','script']
+
+var outputList = List()
+for(word <- removeFrom) {
+    for(c <- to_remove) {
+        if(word.contains(c)) outputList.addString(word)
+    }
+}
+
+Q. map vs flatMap? Which one is faster?
+
+Q. grouByKey vs reduceByKey?
+
+Q. What is DAG, TASK, Catalyst Optimizer?
+
+Q. Write code to find 4th largest salary
+val windowSpec = Window.partitionBy("salary").orderBy(desc("salary"))
+val df2 = empDF.withColumn("rank", row_number().over(windowSpec))
+df2.filter("rank == 4")
+
+
+Q. Scenario
+-----------
+4 Node
+64GB RAM * 4
+64 cores per node
+Data is 200GB = 204800 MB / 128MB = 1600 partitions
+
+1600/4 = 400 partitions per node (400 * 128)=> 51200MB per node will process
+
+65536MB RAM per node 
+
+20 executors per node => each executor will process 51200/20 = 2560MB of data.
+
+5 cores per executor.
+Total 20 executors. Therefore total workers 20 * 5 = 100
+
+20 executor on 4 nodes. That means 5 executors per node.
+
+(200*1024)/100
+
+Q. How to delete unwanted files from a directory but keep all text files.
+find . -maxdepth 1 -type f -name '[^part-0*.txt]' -delete
+
+shopt -s extglob
+rm !(part-0*.txt)
+
+Q. What happens when an Kafka ISR lag happens?
+The leader will remove the out-of-sync replica, so as to prevent the message write latency from increasing. 
+As long as the out-of-sync replica is still alive, it keeps pulling message from the leader. 
+Once the out-of-sync replica catches up the leader’s log end offset, it will be added back to the ISR.
+
+Q. How to resolve merge conflict?
+https://opensource.com/article/20/4/git-merge-conflict
+
+Open conflict file. Delete any unwanted content along with conflict signs. Save the file. Then git add & git commit.
+
+Q. What are disadvantages of waterfall model?
+Changes are difficult to accomodate.
+No working software is produced until late during the life cycle.
+
+Q. How work is assigned in your team?
+
+
+---------------------------
+CGI
+---------------------------
+
+Coding Spark program => word count
+
+SQL Analytical functions (rank, dense rank, window function)
+    Find 2nd largest salary
+
+SQL Queries
+Hive Optimization (Partitioning, Bucketing, Join Optimization)
+
+Spark Optimization (Catalyst Optimizer, Join, spark-submit)
+Jobs, lineage, DAG, Stage, Task,
+groupByKey vs reduceByKey
+
+Project Discussion
+
+val df = spark.read.textFile("words.txt")
+val wordsDF = df.select(split(col("value"), " ").alias("words"))
+val wordDF = wordsDF.select(explode(col("words")).alias("word"))
+val wordCountDF = wordDF.groupBy("word").count
+wordCountDF.show(truncate=false)
+wordCountDF.orderBy(desc("count")).show(truncate=false)
+
+List of string are there and u have to find the list of Arrays containing the strings consist of same character
+Input: abc cba azf bca fza
+Output: [abc bca cba] [azf fza]
+

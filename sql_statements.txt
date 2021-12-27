@@ -1,0 +1,200 @@
+person (id, name, age);
+car (id, brand, model, price, owner_id);
+
+movie (id, title, production_year, director_id)
+director (id, name, birth_year)
+
+orders (order_id, customer_id, order_date, ship_date, total_sum)
+employees (department, first_name, last_name, year, salary, position)
+
+between
+not between
+
+-- sort by multiple columns
+select * from employees 
+order by department asc, salary desc;
+
+-- count(*) vs count(customer_id)
+count(customer_id) will not count null values
+
+--group by and count
+-- number of employees in each department in 2013
+select department, count(*) as employees_no
+from employees
+where year = 2013
+group by department;
+
+-- `group by` clause will group together all rows having 
+-- the same department. The function count(*)
+-- will then count all rows for the specified
+
+
+-- show  all departments together with their lowest 
+-- and highest salary in 2014.
+select department, min(salary), max(salary)
+from employees
+where year = 2014
+group by department;
+
+-- output will have one row for each department
+
+department      min     max
+----------------------------
+Accounting	    3700	3800
+Help Desk	    1900	2500
+HR	            2300	2300
+IT	            4100	8100
+
+
+-- group by multiple columns
+remember: each column in the SELECT part must either be used later 
+for grouping or it must be used with one of the functions.
+
+select last_name, first_name, avg(salary)
+from employees
+group by last_name, first_name;
+
+-- avg salary for each department
+select department, avg(salary)
+from employee
+group by dept_name;
+
+-- filtering groups
+-- show avg(salary) of each department is avg > 5000
+select dept_name, avg(salary) as avgsal
+from employee
+group by dept_name
+having avg(salary) > 5000;
+
+-- Find such employees who (have) spent more than 2 years 
+-- in the company. Select their last name and first name 
+-- together with the number of years worked.
+
+select last_name, first_name, count(distinct(year)) as years
+from employees
+group by last_name, first_name
+having count(distinct(year)) > 2;
+
+-- we used distinct because an employee has more than one record for an year
+-- and in order to calculate number of job years we have to remove duplicates.
+
+-- group by with order by
+select last_name, first_name, sum(salary)
+from employees
+group by last_name, first_name
+order by sum(salary) desc;
+
+----------------
+joins
+----------------
+
+room (id, room_number, beds, floor)
+student (id, name, room_id)
+equipment (id, name, room_id)
+
+inner join (default)
+--------------------
+-- shows those rows from the two tables where there is a match between the columns
+-- nulls will not appear in the result
+
+select 
+	room_id,room_number,
+    beds,floor,
+    equipment.id as equipment_id,name
+from room inner join equipment
+on room.id = equipment.room_id;
+
+left join
+---------
+-- returns all rows from the left table 
+-- plus all matching rows from the right table
+
+select * from
+student left join room
+on student.room_id = room.id;
+
+right join
+----------
+-- returns all rows from the right table plus all matching rows from the left table
+
+select * from student
+right join room on
+student.room_id = room.id;
+
+full join
+---------
+
+select * from room
+full join student on
+room.id = student.room_id;
+
+-- note: inner, left, right & full join can also be written as outer join,
+left outer join, right outer join & full outer join. The resuls wiil be same.
+
+
+e.g
+select *
+from room right outer join equipment
+on room.id = equipment.room_id
+where equipment.name='kettle';
+
+-- there are two more joins natural join and self join
+
+-- natural join
+-- don't require ON clause
+
+select * from student 
+natural join room;
+
+-- NATURAL JOIN doesn't require column names because it always 
+-- joins the two tables on the columns with the same name.
+
+-- In our example, students and rooms have been joined 
+-- on the column id, which doesn't really make much sense
+-- Its same as this query:
+
+SELECT *
+FROM student
+JOIN room
+  ON student.id = room.id;
+
+
+-- table aliases
+select e.id, e.name, r.room_number, r.beds
+from room as r inner join equipment as e
+on r.id = e.room_id;
+
+-- self join 
+
+SELECT
+  st1.name,
+  st2.name,
+  room_number
+FROM student st1
+JOIN student st2
+  ON st1.room_id = st2.room_id
+JOIN room r
+  ON st1.room_id = r.id
+WHERE st1.name < st2.name
+  AND beds = 2;
+
+-- Here we are joining result of self join with another table
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

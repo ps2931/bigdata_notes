@@ -1,0 +1,57 @@
+----------------------------
+Spark using Scala Cheatsheet
+----------------------------
+
+/**
+    * Problem 1.
+    * Find out the top 5 most visited destinations.
+*/
+
+val top5VisitedDest = airlineData
+    .filter("DESTINATION_AIRPORT is not null")
+    .groupBy("DESTINATION_AIRPORT")
+    .count
+    .sort(desc("count"))
+
+top5VisitedDest.take(5).foreach(println)
+
+
+/**
+    * Problem 2.
+    * Which month has seen the most number of cancellations due to bad weather
+/
+
+val weatherDelayDf = airlineData
+    .select("weather_delay", "month")
+    .filter((col("weather_delay") =!= lit(null)) || (   col("weather_delay") =!= lit(0)))
+    .groupBy("month")
+    .count.sort(desc("count"))
+    .take(1)
+
+/**
+    * Problem 3.
+    * Top ten origins with the highest AVG departure delay
+*/
+
+airlineData
+    .select("origin_airport", "departure_delay")
+    .groupBy("origin_airport")
+    .agg(avg("departure_delay").as("avg_delay"))
+    .sort(desc("avg_delay"))
+    .take(10)
+
+/**
+    * Problem 4.
+    * Which route (origin & destination) has seen the maximum diversion?
+*/
+
+airlineData
+    .select("origin_airport", "destination_airport", "diverted")
+    .groupBy("origin_airport", "destination_airport")
+    .count.sort(desc("count"))
+    .show()
+
+
+
+
+
