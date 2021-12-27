@@ -346,3 +346,195 @@ df12.show()
 ///////////////////////////////////
 // Joining and stacking DataFrames
 ///////////////////////////////////
+val countriesDf = spark.read.format("csv")
+  .option("header", "true")
+  .load("/home/pankaj/Code/bigdata_notes/data/manufacturers.csv")
+
+val firstWordUdf = udf((s: String) => {
+  s.split("\\s+")(0)
+})
+spark.udf.register("firstWordUdf", firstWordUdf)
+
+val autoDf = spark.read.format("csv")
+  .option("header", true)
+  .load("/home/pankaj/Code/bigdata_notes/data/auto-mpg.csv")
+
+val autoManufacturerDf = autoDf
+  .withColumn("manufacturer", firstWordUdf(col("carname")))
+
+val joinCondition = countriesDf.col("manufacturer") === autoManufacturerDf.col("manufacturer")
+val joinedDf = autoManufacturerDf.join(countriesDf, joinCondition, "inner")
+joinedDf.show()
+
+// Multiple join conditions
+val multiJoinCondition = (countriesDf.col("manufacturer") === autoManufacturerDf.col("manufacturer")) ||
+  autoManufacturerDf.col("mpg") === countriesDf.col("manufacturer")
+
+val multiConditionJoinDf = autoManufacturerDf.join(countriesDf, multiJoinCondition, "inner")
+multiConditionJoinDf.show()
+
+// Different join types
+// Inner join on one column.
+ val innerJoinedDf = autoDf.join(autoDf, "carname")
+
+// Left (outer) join
+// Left anti (not in) join.
+// Right (outer) join.
+// Full join.
+// Cross join.
+
+// Concatenate two DataFrames
+val df1 = spark.read.format("csv")
+  .option("header", "true")
+  .load("/home/pankaj/Code/bigdata_notes/data/part1.csv")
+
+val df2 = spark.read.format("csv")
+  .option("header", "true")
+  .load("/home/pankaj/Code/bigdata_notes/data/part2.csv")
+df1.union(df2)
+
+// Load multiple files into a single DataFrame
+val files = Seq("/home/pankaj/Code/bigdata_notes/data/part1.csv",
+  "/home/pankaj/Code/bigdata_notes/data/part2.csv")
+val df3 = spark.read.format("csv")
+  .option("header", "true")
+  .load(files:_*)
+
+// Dealing with NULLs and NaNs in DataFrames
+autoDf.where(col("horsepower) is null"))
+autoDf.where(col("horsepower) is not null"))
+
+// Drop rows with Null values
+autoDf.na.drop(2, Seq("horsepower"))
+
+// Count all Null or NaN values in a DataFrame
+autoDf.where("horsepower is null").count
+
+///////////////////////////////////////////
+// Parsing and processing dates and times.
+///////////////////////////////////////////
+
+// Convert an ISO 8601 formatted date string to date type
+import spark.implicits._
+val df = spark.sparkContext.parallelize(
+  Seq(
+    "2021-01-01",
+    "2022-01-01"
+  )
+).toDF("date_col")
+df.printSchema()
+
+val df1 = df
+  .withColumn("date_col", col("date_col").cast(DateType))
+df1.show()
+df1.printSchema()
+
+// Convert a custom formatted date string to date type
+val df2 = spark.sparkContext.parallelize(
+  Seq(
+    "20210101",
+    "20220101"
+  )
+).toDF("date_col")
+
+val df3 = df2
+  .withColumn("date_col", to_date(col("date_col"), "yyyyMMdd"))
+df3.show()
+df3.printSchema()
+
+// Get the last day of the current month
+val df4 = spark.sparkContext.parallelize(
+  Seq(
+    "2020-01-15",
+    "1712-02-10"
+  )
+).toDF("date_col")
+
+val df5 = df4
+  .withColumn("date_col", col("date_col").cast(DateType))
+  .withColumn("last_day", last_day(col("date_col")))
+
+df5.show()
+df5.printSchema()
+
+// Convert UNIX (seconds since epoch) timestamp to date
+val df6 = spark.sparkContext.parallelize(
+  Seq(
+    "1590183026",
+    "2000000000"
+  )
+).toDF("ts_col")
+
+val df7 = df6.withColumn("date_col", from_unixtime(col("ts_col")))
+df7.show()
+df7.printSchema() // date_col will be String type
+
+/////////////////////////////////////////////////
+/ Analyzing unstructured data like JSON, XML, etc
+/////////////////////////////////////////////////
+val baseDf = spark.read.json("/home/pankaj/Code/bigdata_notes/data/financial.jsonl")
+baseDf.printSchema()
+
+val targetJsonFields = Seq(
+ col("symbol").alias("symbol"),
+ col("quoteType.longName").alias("longName"),
+ col("price.marketCap.raw").alias("marketCap"),
+ col("summaryDetail.previousClose.raw").alias("previousClose"),
+ col("summaryDetail.fiftyTwoWeekHigh.raw").alias("fiftyTwoWeekHigh"),
+ col("summaryDetail.fiftyTwoWeekLow.raw").alias("fiftyTwoWeekLow"),
+ col("summaryDetail.trailingPE.raw").alias("trailingPE")
+
+baseDf
+  .select(targetJsonFields:_*)
+  .show()
+
+// Flatten top level text fields from a JSON column
+// ------------------------------------------------
+val df8 = spark.read.format("csv")
+  .option("header", "true")
+  .option("quote", "\"")
+  .option("escape", "\"")
+  .load("/home/pankaj/Code/bigdata_notes/data/financial.csv")
+
+// Infer schema of column containing JSON data
+val jsonSchema = spark.read.json(df8.select("financial_data").as[String]).schema
+val df9 = df8
+  .withColumn("parsed", from_json(col("financial_data"), jsonSchema))
+
+val jsonColumnNames = Seq(
+  col("parsed.symbol").alias("symbol"),
+  col("parsed.quoteType.longName").alias("longName"),
+  col("parsed.price.marketCap.raw").alias("marketCap"),
+  col("parsed.summaryDetail.previousClose.raw").alias("previousClose"),
+  col("parsed.summaryDetail.fiftyTwoWeekHigh.raw").alias("fiftyTwoWeekHigh"),
+  col("parsed.summaryDetail.fiftyTwoWeekLow.raw").alias("fiftyTwoWeekLow"),
+  col("parsed.summaryDetail.trailingPE.raw").alias("trailingPE")
+)
+df9.select(jsonColumnNames:_*).show()
+
+// Un-nest an array of complex structures
+// --------------------------------------
+val df10 = spark.read.json("/home/pankaj/Code/bigdata_notes/data/financial.jsonl")
+
+// Analyze balance sheet data, which is held in an array of complex types.
+val targetJsonColumns = Seq(
+  col("symbol").alias("symbol"),
+  col("balanceSheetHistoryQuarterly.balanceSheetStatements").alias(
+    "balanceSheetStatements"
+  )
+)
+
+val selectedDf = df10.select(targetJsonColumns:_*)
+
+val selectedJsonColumns = Seq (
+  col("symbol").alias("symbol"),
+  col("col.endDate.fmt").alias("endDate"),
+  col("col.cash.raw").alias("cash"),
+  col("col.totalAssets.raw").alias("totalAssets"),
+  col("col.totalLiab.raw").alias("totalLiab")
+)
+
+val df11 = selectedDf
+  .select(col("symbol"), explode(col("balanceSheetStatements")))
+  .select(selectedJsonColumns:_*)
+df11.show()
