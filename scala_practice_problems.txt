@@ -121,7 +121,52 @@ def findKthLargest(nums: Array[Int], k: Int): Int = {
 // 4th largest
 findKthLargest(Array(101, 107, 1, 13, 17, 19, 23, 27), 4) // 23
 
+// Count number of occurence of each string
+def list_elemnt_occurrences[A](list1:List[A]):Map[A, Int] = {
+      list1.groupBy(el => el).map(e => (e._1, e._2.length))
+}
+
+scala> list_elemnt_occurrences(List("Red", "Green", "White", "Black", "Red", "Green", "Black"))
+res0: Map[String,Int] = Map(White -> 1, Black -> 2, Red -> 2, Green -> 2)
+
+// Input: List("abc", "cba", "fza", "afz", "bac")
+// Output: List(("abc", "cba", "bac"),("fza", "afz"))
+
+val alist = List("abc", "cba", "fza", "afz", "bac")
+val blist = List("abc", "bac", "cba", "fza", "afz")
+
+var finalList = List(List.empty[String])
+for (aword <- alist) {
+  var simalrWordsList = List.empty[String]
+  for (bword <- blist) {
+    if (aword.sorted.equalsIgnoreCase(bword.sorted)) {
+      simalrWordsList = bword +: simalrWordsList
+    }
+  }
+  finalList = simalrWordsList.reverse +: finalList
+}
+println(finalList.distinct)
+
 Given an unsorted Array . Find 2nd largest number in that array.
 ---------------------------------------------------------------
+
+// with sort
+val arr = Array(12, 3, 5, 7, 19)
+scala> val arr2 = arr.sorted.reverse
+arr2: Array[Int] = Array(19, 12, 7, 5, 3)
+scala> arr2(2-1) // 2nd largest element
+
+// without sort
+// kth largest element
+val nums = Array(12,3,5,7,19)
+val k = 2
+val minHeap = scala.collection.mutable.PriorityQueue[Int]()
+for(i <- nums)  {
+  minHeap.enqueue(i)
+  if(minHeap.size > k) {
+    minHeap.dequeue()
+  }
+}
+println(minHeap.dequeue())
 
 
