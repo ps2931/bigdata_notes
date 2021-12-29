@@ -90,12 +90,20 @@ groupByKey vs reduceByKey
 
 Project Discussion
 
-val df = spark.read.textFile("words.txt")
-val wordsDF = df.select(split(col("value"), " ").alias("words"))
-val wordDF = wordsDF.select(explode(col("words")).alias("word"))
-val wordCountDF = wordDF.groupBy("word").count
-wordCountDF.show(truncate=false)
-wordCountDF.orderBy(desc("count")).show(truncate=false)
+// word count
+val textDatDf = spark.read.format("text").load("words.txt")
+textDatDf
+    .map(line => line.getString(0).split(" "))
+    .select(explode($"value").alias("word"))
+    .groupBy("word").count.orderBy(desc("count"))
+    .show
+
+// or
+val textFileRdd = spark.sparkContext.textFile("words.txt")
+val counts = textFileRdd
+                .flatMap(line => line.split(" "))
+                .map(word => (word, 1))
+                .reduceByKey(_ + _)
 
 List of string are there and u have to find the list of Arrays containing the strings consist of same character
 Input: abc cba azf bca fza
@@ -106,3 +114,87 @@ Concentrix
 -----------------------
 They major focus on SQL part
 And optimizations in hive and spark
+
+------------------------
+Societe Generale
+------------------------
+// Prob: Read multiheader (same header) file
+id,name
+id,name
+1,abc
+2,def
+3,ghi
+
+As you can see there are two lines of header
+
+val df = spark.read.option("header", "true").csv("multiheader.csv")
+df.show()
++---+----+
+| id|name|
++---+----+
+| id|name|
+|  1| abc|
+|  2| def|
+|  3| ghi|
++---+----+
+
+val firstRow = df.first()
+val df2 = df.filter(row => row != firstRow)
+df2.show()
++---+----+
+| id|name|
++---+----+
+|  1| abc|
+|  2| def|
+|  3| ghi|
++---+----+
+
+
+// Read multiheader (different headers) file
+id,name
+emp_id,emp_name
+1,aaa
+2,bbb
+3,ccc
+
+// Prob: Drop the first header but keep the second header.
+
+val df1 = spark.read.csv("multiheader.csv")
+val unwantedRow = df1.first
+val df2 = df1.filter(row => row != unwantedRow)
+
+val wantedHeader = df2.first
+val df3 = df2.filter(row => row != wantedHeader)
+
+val colArr = df3.columns
+
+val df4 = df3
+    .withColumnRenamed(colArr(0), headerRow.getString(0))
+    .withColumnRenamed(colArr(1), headerRow.getString(1))
+
+
+// Second way
+val df = spark.read
+    .option("header", "true")
+    .csv("multiheader.csv")
+
+val unwantedHeader = df.columns
+val wantedHeader = df.first
+
+val df2 = df
+    .withColumnRenamed(unwantedHeader(0), (wantedHeader.getString(0)))
+    .withColumnRenamed(unwantedHeader(1), wantedHeader.getString(1))
+    .filter(row => row != wantedHeader)
+
+
+// Prob: Drop the second header but keep the first header.
+id,name
+emp_id,emp_name
+1,aaa
+2,bbb
+3,ccc
+
+val df = spark.read.option("header","true").csv("multiheader.csv")
+val unwantedHeaderRow = df.first
+val df2 = df.filter(row => row != unwantedHeaderRow)
+
