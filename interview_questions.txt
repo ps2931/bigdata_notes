@@ -118,6 +118,52 @@ And optimizations in hive and spark
 ------------------------
 Societe Generale
 ------------------------
+
+Scala:
+What are case classes?
+What are closure?
+
+// Find is words are in aString
+val words = Array("cat","bat","hat")
+val aString = "abcdadt"
+
+// cat and bat are in aString
+
+var flag = true
+for (word <- words) {    
+    val arr = word.toCharArray
+    for (i <- 0 until arr.size) {
+        if(!str.contains(arr(i))) {
+            flag = false
+        }
+    }
+    if(flag) {
+        println(word + " found in " + str)
+    }
+}
+
+
+Prob:
+Find max profit (purchase - sale) which we can get out of the array.
+Once you purchased a stock, you can sale it on back date. That is
+if you purchased stock(4) you can not sale it at stock(3)
+
+val stock = Array(50,12,2,3,15,20,1,5)
+
+var max = 0
+var temp = 0
+for (i <- 0 until stock.size) {    
+    for(j <- i + 1 until stock.size) {
+        max = stock(j) - stock(i)
+        if(max > temp) {
+            temp = max            
+            println(s"$i, $j, max: $max")
+        }
+    }
+}
+
+
+
 // Prob: Read multiheader (same header) file
 id,name
 id,name

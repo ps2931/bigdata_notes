@@ -186,3 +186,76 @@ words.filterNot(w => removeChars.toSet.exists(x => w.contains(x)))
 res0: List[String] = List(XYZ, MALE, ABC, 12KG, script)
 
 
+// Given an array of integers, return indices of the two numbers
+// such that they add up to a specific target
+// Example: nums = [2,7,11,15], target = 17
+// Output: [1,3] because nums[1] + nums[3] = 17
+
+public int[] twoSum(int[] nums, int target) {
+  HasMap<Integer, Integer> hm = new HashMap<Integer, Integer>();
+
+  for (int i = 0; i < nums.length; i++) {
+    int temp = target - nums[i]
+    if(hm.keySet().contains(temp)) {
+      return new int[] { hm.get(temp), i };  
+    }
+    hm.put(nums[i], i);
+  }
+  return new int[0];
+}
+
+// Best Tiem to Buy and Sell Stock
+// Input = [7,1,5,3,6,4]
+// Buy on day 2 (price=1) and sell on day 5 (price=6)
+// So that profit = 6 - 1 = 5
+public int maxProfit(int[] prices) {
+  int minSoFar = prices[0];
+  int maxProfit = 0;
+  for (int i = 1; i < prices.length; i++) {
+    if(prices[i] < minSoFar) {
+      minSoFar = prices[i];
+    }
+    if(prices[i] - minSoFar > maxProfit) {
+      maxProfit = prices[i] - minSoFar  
+    }
+  }
+  return maxProfit;
+}
+
+
+// Contains duplicates
+// Find duplicates in an array
+
+public boolean containsDuplicates(int[] nums) {
+  HashSet<Integer> hs = new HashSet<Integer>();
+  
+  for (int i = 0; i < nums.length; i++) {
+    if(hs.contains(nums[i])){
+      return true;
+    }
+    hs.add(nums[i]);
+  }
+  return false;
+}
+
+// Given an array, [1,2,3,4[, creat and array such that
+// each element is the product of rest of the array element
+// [24,12,8,6]. Here 24 is the product of 2*3*4. 12 is product of
+// 1*3*4
+
+
+
+// Find largest number
+Input: [-2,1,-3,4,-1,2,1,-5,4]
+Output: [4,-1,2,1] as it has largest sum = 6
+public int maxSubArray(int[] nums) {
+  int tempSum = nums[0];
+  int maxSum = nums[0];
+  
+  for(int i = 1; i < nums.length; i++) {
+    tempSum = Math.max(tempSum + nums[i], nums[i]);
+    maxSum = Math.max(tempSum, maxSum);
+  }
+  return maxSum;
+}
+
