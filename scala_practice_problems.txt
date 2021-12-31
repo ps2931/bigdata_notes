@@ -228,7 +228,7 @@ public int maxProfit(int[] prices) {
 
 public boolean containsDuplicates(int[] nums) {
   HashSet<Integer> hs = new HashSet<Integer>();
-  
+
   for (int i = 0; i < nums.length; i++) {
     if(hs.contains(nums[i])){
       return true;
@@ -251,7 +251,7 @@ Output: [4,-1,2,1] as it has largest sum = 6
 public int maxSubArray(int[] nums) {
   int tempSum = nums[0];
   int maxSum = nums[0];
-  
+
   for(int i = 1; i < nums.length; i++) {
     tempSum = Math.max(tempSum + nums[i], nums[i]);
     maxSum = Math.max(tempSum, maxSum);
@@ -260,33 +260,33 @@ public int maxSubArray(int[] nums) {
 }
 
 // Find an element
- static String search(int arr[], int n, int x)
-    {
-        // 1st comparison
-        if (arr[n - 1] == x)
-            return "Found";
-  
-        int backup = arr[n - 1];
-        arr[n - 1] = x;
-  
-        // no termination condition and thus
-        // no comparison
-        for (int i = 0;; i++) {
-            // this would be executed at-most n times
-            // and therefore at-most n comparisons
-            if (arr[i] == x) {
-                // replace arr[n-1] with its actual element
-                // as in original 'arr[]'
-                arr[n - 1] = backup;
-  
-                // if 'x' is found before the '(n-1)th'
-                // index, then it is present in the array
-                // final comparison
-                if (i < n - 1)
-                    return "Found";
-  
-                // else not present in the array
-                return "Not Found";
-            }
+static String search(int arr[], int n, int x)
+{
+    // 1st comparison
+    if (arr[n - 1] == x)
+        return "Found";
+
+    int backup = arr[n - 1];
+    arr[n - 1] = x;
+
+    // no termination condition and thus
+    // no comparison
+    for (int i = 0;; i++) {
+        // this would be executed at-most n times
+        // and therefore at-most n comparisons
+        if (arr[i] == x) {
+            // replace arr[n-1] with its actual element
+            // as in original 'arr[]'
+            arr[n - 1] = backup;
+
+            // if 'x' is found before the '(n-1)th'
+            // index, then it is present in the array
+            // final comparison
+            if (i < n - 1)
+                return "Found";
+
+            // else not present in the array
+            return "Not Found";
         }
+    }
 }

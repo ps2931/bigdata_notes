@@ -51,7 +51,50 @@ airlineData
     .count.sort(desc("count"))
     .show()
 
+/*
+    * Problem
+    Input Data
+    Sarkar,A
+    Banerjee,A
+    Sarkar,D
+    Biswas,E
+    Sarkar,B
+    Biswas,A
+    Sarkar,F
+    Biswas,G
 
+    Output:
+    +--------+------------+
+    |lastname|       combi|
+    +--------+------------+
+    |Banerjee|         [A]|
+    |  Biswas|   [A, E, G]|
+    |  Sarkar|[A, B, D, F]|
+    +--------+------------+
+*/
+val df = spark.read.csv("data.csv").toDF("lastname", "firstname")
+df
+  .groupBy("lastname")
+  .agg(sort_array(collect_set("firstname"), true).alias("combi"))
+  .orderBy("lastname")
+  .show()
 
+// or do this if order of firstname doesn't matter
+df
+    .groupBy("lastname")
+    .agg(collect_set("firstname"))
+    .orderBy("lastname")
+    .show
+
+/*
+    Problem: Find 2nd highest Salary for each department
+    Csv Header: name,dept_id,salary
+*/
+
+val windowSpec = Window.partitionBy("dept_id").orderBy(desc("salary"))
+df
+  .withColumn("rank", rank().over(windowSpec))
+  .where($"rank" === 2)
+  .show()
 
 
