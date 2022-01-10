@@ -244,3 +244,170 @@ val df = spark.read.option("header","true").csv("multiheader.csv")
 val unwantedHeaderRow = df.first
 val df2 = df.filter(row => row != unwantedHeaderRow)
 
+Different types of Hive Metastore?
+    - Embedded Metastore
+    - Local Metastore
+    - Remote Metastore
+
+Embedded Metastore:
+In Hive by default, metastore service runs in the same JVM as the Hive service. It uses embedded derby database stored on the local file system in this mode.
+
+Problem:
+Only one embedded Derby database can access the database files on disk at any one time, so only one Hive session could
+be open at a time.
+
+Local Metastore:
+Allow multiple Hive sessions.
+
+Any standalone database (MySQL or PostgreSQL or any other db with JDBC driver) can be used as a metastore.
+
+Hive & Metastore services will run inside the same JVM. RDBMS itself can run in another JVM on a different machine.
+
+Same JVM Process
+ -----------------------
+| Drive ----> Metastore | ----> MySQL (Separate JVM Process/or Machine)
+ -----------------------
+
+This configuration is called as local metastore because metastore service still runs in the same process as the Hive. But it connects to a database running in a separate process, either on the same machine or on a remote machine.
+
+Remote Metastore:
+In this mode, metastore runs on its own separate JVM, not in the Hive service JVM. If other processes want to communicate with the metastore server they can communicate using Thrift Network APIs.
+
+We can also have one more metastore servers in this case to provide more availability. This also brings better manageability/security because the database tier can be completely firewalled off.
+
+
+HashMap vs HashTable?
+- HashMap is non-synchronized. It is not thread-safe and can’t be shared between many threads without proper synchronization code whereas Hashtable is synchronized. It is thread-safe and can be shared with many threads.
+- HashMap allows one null key and multiple null values whereas Hashtable doesn’t allow any null key or value.
+- HashMap is generally preferred over HashTable if thread synchronization is not needed
+
+How to synchronized an arraylist in java?
+
+1. Collections.synchronizedList() method.
+
+synchronized(list)
+{
+   // must be in synchronized block
+   Iterator it = list.iterator();
+
+   while (it.hasNext())
+       System.out.println(it.next());
+}
+
+2. Using CopyOnWriteArrayList.
+
+// creating a thread-safe Arraylist.
+public void usingCopyOnWrite() {
+    CopyOnWriteArrayList<String> threadSafeList
+        = new CopyOnWriteArrayList<String>();
+
+    // Adding elements to synchronized ArrayList
+    threadSafeList.add("geek");
+    threadSafeList.add("code");
+    threadSafeList.add("practice");
+
+    System.out.println("Elements of synchronized ArrayList :");
+
+    // Iterating on the synchronized ArrayList using iterator.
+    Iterator<String> it = threadSafeList.iterator();
+
+    while (it.hasNext())
+        System.out.println(it.next());
+}
+
+It throws UnsupportedOperationException if you try to modify CopyOnWriteArrayList through iterator’s own method(e.g. add(), set(), remove()).
+
+final vs finally vs finalize in Java?
+
+What is closure?
+
+What is currying?
+Currying is the process of converting a function with multiple arguments into a sequence of functions that take one argument. Each function returns another function that consumes the following argument.
+
+What is partial functions?
+
+val positive: PartialFunction[Int, Int] = {
+  case x if x >= 0 => x
+}
+
+val odd: PartialFunction[Int, Boolean] = {
+  case x if x % 2 == 1 => true
+}
+
+val even: PartialFunction[Int, Boolean] = {
+  case x if x % 2 == 0 => true
+}
+
+val evenCheck: PartialFunction[Int, Boolean] = positive andThen even
+val oddCheck: PartialFunction[Int, Boolean] = positive andThen odd
+
+evenCheck.isDefinedAt(-2)
+
+What are sealed classes?
+A final modifier in Scala makes a class or trait unavailable for an extension. Therefore, it’s quite restrictive. On the other hand, making a class public allows any other class to extend from it.
+
+What if we want something in between these two?
+
+The sealed keyword is used to control the extension of classes and traits. Declaring a class or trait as sealed restricts where we can define its subclasses — we have to define them in the same source file.
+Using sealed classes, we can guarantee that only subclasses defined in the file exist. This helps the compiler know all the subclasses of the sealed class. Therefore, this behavior is useful in scenarios like pattern matching.
+
+--------------------------
+Luxoft 2nd Round Technical
+--------------------------
+
+Q. What are traits?
+Q. What are mixin traits?
+Q. How to load data from Sqoop to DB if there is no primary key in the table?
+Either use -m 1 (or) --split-by <RDBMS-Column>
+
+Q.
+Input:
+Empid empname transaction created_at 
+12      A       D           1-06
+12      A       C           2-06
+13      B       C           1-06
+13      B       C           2-06
+14      C       D           1-06
+14      C       D           2-06
+14      C       D           3-06
+
+Output:
+12 A D 1-06
+12 A C 2-06
+13 B C 2-06
+14 C D 3-06
+
+val df = spark
+    .read.format("csv")
+    .option("header", "true")
+    .load("empdata.csv")
+
+val windowSpec = Window
+    .partitionBy("empid", "empname", "transaction")
+    .orderBy(desc("created_at"))
+
+df
+  .withColumn("rnum", row_number().over(windowSpec))
+  .select("*")
+  .where("rnum == 1")
+  .show(false)
+
+
+Q.
+There are 6 Nodes, 32 Cores in total and 128 GB RAM in total. Data size is 1TB.
+Find number of cores per executors.
+
+Available cores = 32 - 6 = 26
+Available RAM = 128 - 6 = 122
+
+Cores per node = 26/6 => 4 (approx) 
+  Either 2 cores per executors 
+  or 1 core per executor
+
+If 2 cores per executors
+  RAM per node = 122
+  RAM per executor = 122/6 => 20 (approx)/2 => 10 GB per executors
+If 1 core per executor 
+  RAM per node = 122
+  RAM per executor = 122/6 => 20 (approx)/4 => 5 GB per executor
+
