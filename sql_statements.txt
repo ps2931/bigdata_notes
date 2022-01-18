@@ -180,18 +180,104 @@ WHERE st1.name < st2.name
 
 -- Here we are joining result of self join with another table
 
+sub-queries
+-----------
+country: id, name, population, area
+city: id, name, country_id, population, area, rating
+mountain: id, name, height, country_id
+trip: id, city_id, days, price
+hiking_trip: id, mountain_id, days, price, length, difficulty
+
+The database will first check the subquery in place of the subquery and then check the final query.
+
+Find cities which have the same rating as Paris.
+
+SELECT name
+FROM city
+WHERE rating = (
+  SELECT rating
+  FROM city
+  WHERE name = 'Paris'
+);
+
+// sub-query with logical operator
+SELECT name
+FROM city
+WHERE population > (
+  SELECT population
+  FROM city
+  WHERE name = 'Madrid'
+);
+
+// sub-query with functions
+SELECT *
+FROM trip
+WHERE price > (
+  SELECT AVG(price)
+  FROM trip
+);
+
+// sub-query with IN operator
+SELECT *
+FROM city
+WHERE rating IN (3, 4, 5);
+
+// find all information about all trips in cities
+// whose area is greater than 100
+SELECT *
+FROM trip
+WHERE city_id IN (
+  SELECT id
+  FROM city
+  WHERE area > 100
+);
+
+// operator ALL and sub-query
+You can also use ALL with other logical operators like:
+ = ALL, != ALL, < ALL, <= ALL, >= ALL
+
+// Find all information about the cities which are
+// less populated than all countries in the database.
+SELECT *
+FROM city
+WHERE city.population < ALL (
+  SELECT population
+  FROM country
+);
+
+//** Note that since both main and subquery has population
+// column you have to distiniguish between them using table name.
 
 
+// operator ANY and sub-query
+// Again, other logical operators are possible like:
+ = ANY, != ANY, < ANY, > ANY, <= ANY, >= ANY
+
+// Find all information about all the city trips
+// which have the same price as any hiking trip.
+SELECT
+* FROM trip
+WHERE trip.price = ANY (
+  SELECT price
+  FROM hiking_trip
+);
 
 
+Correlated Query
+------------------
+Subquery dependent on main query.
 
+// Find all information about each country whose population
+// is equal to or smaller than the population of the least
+// populated city in that specific country.
 
-
-
-
-
-
-
+SELECT *
+FROM country
+WHERE population <= (
+  SELECT MIN(population)
+  FROM city
+  WHERE city.country_id = country.id
+);
 
 
 

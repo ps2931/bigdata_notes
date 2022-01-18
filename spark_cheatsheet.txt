@@ -97,4 +97,13 @@ df
   .where($"rank" === 2)
   .show()
 
+/*
+Word count using dataframe
+*/
 
+df
+    .map(row => row.getString(0).split(" "))
+    .select(explode($"value").alias("word"))
+    .groupBy("word").count
+    .orderBy(desc("count"))
+    .show

@@ -145,7 +145,8 @@ for (aword <- alist) {
   }
   finalList = simalrWordsList.reverse +: finalList
 }
-println(finalList.distinct)
+println(finalList.distinct.filterNot(_.forall(_.isEmpty)))
+List(List(abc, bac, cba), List(fza, afz))
 
 Given an unsorted Array . Find 2nd largest number in that array.
 ---------------------------------------------------------------
@@ -290,3 +291,19 @@ static String search(int arr[], int n, int x)
         }
     }
 }
+
+----------------------------
+Find all occurence of Hello
+----------------------------
+val searchItem = "Hello"
+val str = "HelloabcdefghijklHello"
+for (ss <- 0 until (str.length - searchItem.length + 1)) {
+    val word = str.substring(ss, ss+5)
+    if(searchItem == word) {
+        println(s"$searchItem index is $ss")
+    }
+}
+
+// Output
+Hello index is 0
+Hello index is 17

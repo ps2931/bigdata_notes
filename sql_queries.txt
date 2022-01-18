@@ -102,3 +102,29 @@ select
     sum(weight) over 
         (order by weight DESC ROWS between unbounded preceding and current row) as running_total_weight 
 from cats order by running_total_weight
+
+Given
+Schema: visiting_date,doctor,name,patient
+
+insert into hospital values 
+('2021-01-20','a','b'),
+('2021-01-21','d','b'),
+('2021-01-22','e','c'),
+('2021-01-23','f','b'),
+('2021-01-24','g','b'),
+('2021-01-20','a','x'),
+('2021-01-21','d','x'),
+('2021-01-22','e','y'),
+('2021-01-23','f','x'),
+('2021-01-24','g','x');
+
+How many patients visisted more than three doctors.
+
+with cte_hospital as
+(select
+  patient,
+  lag(patient, 3) OVER (partition by patient) lagp
+from hospital
+) select count(distinct(patient)) from cte_hospital where lagp is not null;
+
+
