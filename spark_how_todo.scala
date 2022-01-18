@@ -200,6 +200,49 @@ autoDf
   .join(excludeKeysDf, joinCondition, "left_anti")
   .show(5)
 
+
+// --------------------------------------------------
+scala> df1.show
++----+----------+
+|name|      dept|
++----+----------+
+|   a|     sales|
+|   b| marketing|
+|   c|production|
+|   d|     sales|
++----+----------+
+
+
+scala> df2.show
++----+-----+
+|name|grade|
++----+-----+
+|   a|   10|
+|   b|   20|
+|   c|   10|
++----+-----+
+
+
+// left_semi: show columns from left table for matching records only
+scala> df1.join(df2, df1.col("name") === df2.col("name"), "left_semi").show
++----+----------+
+|name|      dept|
++----+----------+
+|   c|production|
+|   b| marketing|
+|   a|     sales|
++----+----------+
+
+
+// left_anti: show columns from right table for non-matching records only
+scala> df1.join(df2, df1.col("name") === df2.col("name"), "left_anti").show
++----+-----+
+|name| dept|
++----+-----+
+|   d|sales|
++----+-----+
+// --------------------------------------------------
+
 // Get Dataframe rows that match a substring
 autoDf
   .where(col("carname").contains("custom"))

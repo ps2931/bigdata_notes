@@ -9,12 +9,14 @@ def reverse(s: String) : String =
 
 Q. Write a program
 ------------------
-val removeChars =  List('%', '-', '&', ':')
-val words = ('XYZ','12%', 'MALE', 'ABC','1-7KG', '12KG', 'MALE&FEMELE', '1:1',"script")
+
+Input:
+val removeChars =  Set('%', '-', '&', ':')
+val words = List("XYZ","12%", "MALE", "ABC","1-7KG", "12KG", "MALE&FEMELE", "1:1","script")
 
 // Output: ['MALE','ABC','XYZ','script']
 
-scala> words.filterNot(w => removeChars.toSet.exists(x => w.contains(x)))
+scala> words.filterNot(w => removeChars.exists(x => w.contains(x)))
 res0: List[String] = List(XYZ, MALE, ABC, 12KG, script)
 
 Q. map vs flatMap? Which one is faster?
