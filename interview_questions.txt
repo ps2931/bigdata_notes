@@ -413,3 +413,55 @@ If 1 core per executor
   RAM per node = 122
   RAM per executor = 122/6 => 20 (approx)/4 => 5 GB per executor
 
+------------------------
+Coforge
+------------------------
+
+Mask email id
+
+val maskEmail =  (email:String) => {
+  val dotIndex = email.indexOf('.')
+  val domainIndex = email.indexOf('@')
+
+  val fname = email.substring(0, dotIndex)
+  val domain = email.substring(domainIndex)
+
+  val maskedEmail = fname + "." + "xxx" + domain
+  maskedEmail
+}
+val maskEmailUDF = udf(maskEmail)
+
+val df = sc.parallelize(Seq(
+    ("abc.xyz@gmail.com"), 
+    ("aaa.xyz@gmail.com")
+  )).toDF("email")
+
+df.withColumn("maskEmail", maskEmailUDF($"email")).show
+
+----------------------
+Wallmart
+----------------------
+
+Larget sum of 3 elements in an array.
+Input: [126,125,67,28, 658] Output: [9, 8, 13, 10, 19]
+
+def sumOfDigits(n: Int): Int = {
+  var sum = 0
+  var number = n;
+  while(number > 0) {
+    sum += number % 10
+    number = number / 10
+  }
+  sum
+}
+
+scala> numbers
+res0: List[Int] = List(126, 125, 67, 28, 658)
+
+scala> numbers.map(n => sumOfDigits(n))
+res1: List[Int] = List(9, 8, 13, 10, 19)
+
+CDC (Capture Data Change) in Spark/Hive.
+Generate an 8 digit password.
+Merging two arrays without using a third array.
+SQL Queries (running total)
